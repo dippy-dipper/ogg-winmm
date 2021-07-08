@@ -157,31 +157,31 @@ int plr_pump()
         pos += bytes;
     }
 
+#ifdef OGG_WINMM_INI
     /* Add volume override with "winmm.ini". */
     int ogg_winmm_vol = 100;
 
-    FILE * fp;
+    FILE *fp;
     fp = fopen ("winmm.ini", "r");
-            /* If not null read values */
-            if (fp != NULL){
-            fscanf(fp, "%d", &ogg_winmm_vol);
-            fclose(fp);
-            if (ogg_winmm_vol < 0) ogg_winmm_vol = 0;
-            if (ogg_winmm_vol > 100) ogg_winmm_vol = 100;
-            if (ogg_winmm_vol != 100) plr_vol = ogg_winmm_vol;
-        }
-        /* Else write new ini file */
-        else{
-        fp = fopen ("winmm.ini", "w+");
-        fprintf(fp, "%d\n"
-                    "#\n"
-                    "# Winmm.dll emulated CD music volume override.\n"
-                    "# Change the number to the desired volume level (0-100).", ogg_winmm_vol);
-        fclose(fp);
+    if (fp != NULL) {
+	    /* If not null read values */
+	    fscanf(fp, "%d", &ogg_winmm_vol);
+	    fclose(fp);
+	    if (ogg_winmm_vol < 0) ogg_winmm_vol = 0;
+	    if (ogg_winmm_vol > 100) ogg_winmm_vol = 100;
+	    if (ogg_winmm_vol != 100) plr_vol = ogg_winmm_vol;
+    } else {
+	    /* Else write new ini file */
+	    fp = fopen ("winmm.ini", "w+");
+	    fprintf(fp, "%d\n"
+			    "#\n"
+			    "# Winmm.dll emulated CD music volume override.\n"
+			    "# Change the number to the desired volume level (0-100).", ogg_winmm_vol);
+	    fclose(fp);
     }
+#endif
 
     /* volume control, kinda nasty */
-
     int x, end = pos / 2;
     short *sbuf = (short *)buf;
     for (x = 0; x < end; x++)

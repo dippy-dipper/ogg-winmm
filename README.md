@@ -60,4 +60,8 @@ converts all .wav files into .ogg format. (track names must not contain spaces!)
 # Building:
 
 - Use MinGW 6.3.0-1 or later.
-- Dependencies: libogg, libvorbis
+- Put libraries in dir "libs/"
+- Put include files in dir "libs/include"
+- Dependencies:
+  - libogg (https://github.com/gcp/libogg.git)
+  - libvorbis (https://github.com/xiph/vorbis.git)
