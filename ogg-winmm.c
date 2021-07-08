@@ -31,8 +31,7 @@ struct track_info
     char path[MAX_PATH];    /* full path to ogg */
     unsigned int length;    /* seconds */
     unsigned int position;  /* seconds */
-    unsigned int playTime;  /* accumulated play time in milliseconds */
-    clock_t tick;           /* clock tick at play start or resume */
+    clock_t tick;           /* clock tick at play start */
 
 };
 
@@ -84,6 +83,7 @@ int player_main(struct play_info *info)
     while (current <= last && playing)
     {
         dprintf("Next track: %s\r\n", tracks[current].path);
+        tracks[current].tick = clock();
         plr_play(tracks[current].path);
 
         while (1)
@@ -414,16 +414,10 @@ MCIERROR WINAPI fake_mciSendCommandA(MCIDEVICEID IDDevice, UINT uMsg, DWORD_PTR 
                     TerminateThread(player, 0);
                 }
 
-                if (!paused)
-                {
-                    tracks[current].playTime = 0;
-                }
-
                 playing = 1;
                 playloop = 1;
                 paused = 0;
                 player = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)player_main, (void *)&info, 0, NULL);
-                tracks[current].tick = clock();
             }
         }
 
@@ -433,16 +427,15 @@ MCIERROR WINAPI fake_mciSendCommandA(MCIDEVICEID IDDevice, UINT uMsg, DWORD_PTR 
             playing = 0;
             playloop = 0;
             plr_stop(); /* Make STOP command instant. */
-            tracks[current].playTime = 0;
             info.first = firstTrack; /* Reset first track */
             current  = 1; /* Reset current track*/
         }
 
+        /* FIXME: MCICDA does not support resume, pause should be equivalent to stop */
         if (uMsg == MCI_PAUSE)
         {
             dprintf("  MCI_PAUSE\r\n");
             plr_stop();
-            tracks[current].playTime += playing ? (unsigned int)((double)(clock() - tracks[current].tick) * 1000.0 / CLOCKS_PER_SEC) : 0;
             playing = 0;
             playloop = 0;
             paused = 1;
@@ -568,7 +561,7 @@ MCIERROR WINAPI fake_mciSendCommandA(MCIDEVICEID IDDevice, UINT uMsg, DWORD_PTR 
                         if (time_format == MCI_FORMAT_MILLISECONDS)
                             parms->dwReturn = tracks[current].position * 1000;
                         else { /* TMSF */
-                            unsigned int ms = tracks[current].playTime + (playing ? (unsigned int)((double)(clock() - tracks[current].tick) * 1000.0 / CLOCKS_PER_SEC) : 0);
+                            unsigned int ms = playing ? (unsigned int)((double)(clock() - tracks[current].tick) * 1000.0 / CLOCKS_PER_SEC) : 0;
                             parms->dwReturn = MCI_MAKE_TMSF(current%100, ms/60000%100, ms%60000/1000, (unsigned int)((double)(ms%1000)/13.5)); /* for CD-DA, frames(sectors) range from 0 to 74.  */
                         }
                     }
