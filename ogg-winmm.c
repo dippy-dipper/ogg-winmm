@@ -18,6 +18,7 @@
 
 #include <windows.h>
 #include <stdio.h>
+#include <time.h>
 #include <ctype.h>
 #include <dirent.h>
 #include "player.h"
@@ -30,6 +31,8 @@ struct track_info
     char path[MAX_PATH];    /* full path to ogg */
     unsigned int length;    /* seconds */
     unsigned int position;  /* seconds */
+    clock_t tick;           /* clock tick at play start */
+
 };
 
 static struct track_info tracks[MAX_TRACKS];
@@ -80,6 +83,7 @@ int player_main(struct play_info *info)
     while (current <= last && playing)
     {
         dprintf("Next track: %s\r\n", tracks[current].path);
+        tracks[current].tick = clock();
         plr_play(tracks[current].path);
 
         while (1)
@@ -427,12 +431,13 @@ MCIERROR WINAPI fake_mciSendCommandA(MCIDEVICEID IDDevice, UINT uMsg, DWORD_PTR 
             current  = 1; /* Reset current track*/
         }
 
+        /* FIXME: MCICDA does not support resume, pause should be equivalent to stop */
         if (uMsg == MCI_PAUSE)
         {
             dprintf("  MCI_PAUSE\r\n");
+            plr_stop();
             playing = 0;
             playloop = 0;
-            plr_stop();
             paused = 1;
         }
 
@@ -552,12 +557,13 @@ MCIERROR WINAPI fake_mciSendCommandA(MCIDEVICEID IDDevice, UINT uMsg, DWORD_PTR 
                             parms->dwReturn = MCI_MAKE_TMSF(parms->dwTrack, 0, 0, 0);
                     }
                     else {
-                        /* Current position */
-                        int track = current % 0xFF;
+                        /* FIXME: Current realtime play position */
                         if (time_format == MCI_FORMAT_MILLISECONDS)
-                            parms->dwReturn = tracks[track].position * 1000;
-                        else /* TMSF */
-                            parms->dwReturn = MCI_MAKE_TMSF(track, 0, 0, 0);
+                            parms->dwReturn = tracks[current].position * 1000;
+                        else { /* TMSF */
+                            unsigned int ms = playing ? (unsigned int)((double)(clock() - tracks[current].tick) * 1000.0 / CLOCKS_PER_SEC) : 0;
+                            parms->dwReturn = MCI_MAKE_TMSF(current%100, ms/60000%100, ms%60000/1000, (unsigned int)((double)(ms%1000)/13.5)); /* for CD-DA, frames(sectors) range from 0 to 74.  */
+                        }
                     }
                 }
 
