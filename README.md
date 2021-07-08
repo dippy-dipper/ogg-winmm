@@ -30,6 +30,10 @@ ogg-winmm emulates the CD-DA audio tracks by reading them from ogg files instead
 
 # Revisions:
 
+v.2021.07.09:
+- Fix the start tick of each track.
+  Since MCICDA does not support pause, unnecessary time accumulation is removed.
+
 v.2021.07.08:
 - Implement realtime TMSF report for MCI_STATUS_POSITION.
   Many games use this realtime status to sync up video and audio frame by frame.
